@@ -148,7 +148,7 @@ fn archive(c: &CookConfig, cf: CollectedFiles) {
     f.read_to_end(&mut file_bytes);
     hash.input(file_bytes.as_slice());
     f = File::create(hash_file_name).unwrap();
-    write!(f, "{}", hash.result_str());
+    writeln!(f, "{}", hash.result_str());
     let archive_file_path = Path::new(archive_file_name).canonicalize().unwrap();
     term_print(term::color::BRIGHT_GREEN, "Cooked", &format!("{}", archive_file_path.display()));
 }
