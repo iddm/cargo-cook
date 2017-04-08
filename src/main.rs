@@ -101,16 +101,15 @@ fn cook() {
     #[cfg(debug_assertions)]
     println!("Config: {:?}", config);
     let internal_config = parse_config(&config);
-    term_print(term::color::BRIGHT_GREEN, "Cooking", &format!("{} v{}",
-                                                              config.package.name,
-                                                              config.package.version));
+    let pkg_name = &format!("{} v{}", config.package.name, config.package.version);
+    term_print(term::color::BRIGHT_GREEN, "Cooking", pkg_name);
     cook_hook(&config.cook, true);
 
     archive(&config, collect(&internal_config));
     upload(&config);
 
     cook_hook(&config.cook, false);
-    term_print(term::color::BRIGHT_GREEN, "Successfully", "cooked the crate!");
+    term_print(term::color::BRIGHT_GREEN, "Finished", "cooking");
 }
 
 
