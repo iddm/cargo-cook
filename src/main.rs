@@ -7,6 +7,7 @@ extern crate toml;
 extern crate regex;
 extern crate tar;
 extern crate crypto;
+extern crate term;
 
 use clap::{ App, AppSettings, SubCommand };
 use regex::Regex;
@@ -16,6 +17,7 @@ use std::io::{ Read, Write };
 use std::path::Path;
 use std::process::Command;
 use std::collections::BTreeMap;
+use std::panic;
 
 type CollectedFiles = BTreeMap<String, String>;
 
@@ -59,6 +61,11 @@ struct InternalConfig {
 }
 
 fn main() {
+    panic::set_hook(Box::new(|panic_info| {
+        // println!("{:?}", panic_info.payload().downcast_ref::<String>().unwrap());
+        term_panic(panic_info.payload().downcast_ref::<String>().unwrap());
+    }));
+
     let _ = App::new(format!("cargo-{}", COMMAND_NAME))
         .about(COMMAND_DESCRIPTION)
         .version(&crate_version!()[..])
@@ -73,7 +80,20 @@ fn main() {
         .get_matches();
 
     cook();
-    println!("Your crate has been cooked successfully.");
+}
+
+fn term_print(color: term::color::Color, status_text: &str, text: &str) {
+    let mut t = term::stdout().unwrap();
+
+    t.attr(term::Attr::Bold).unwrap();
+    t.fg(color).unwrap();
+    write!(t, "{} ", status_text).unwrap();
+    t.reset();
+    write!(t, "{}\n", text).unwrap();
+}
+
+fn term_panic(text: &str) {
+    term_print(term::color::BRIGHT_RED, "Failure:", text);
 }
 
 fn cook() {
@@ -81,12 +101,16 @@ fn cook() {
     #[cfg(debug_assertions)]
     println!("Config: {:?}", config);
     let internal_config = parse_config(&config);
+    term_print(term::color::BRIGHT_GREEN, "Cooking", &format!("{} v{}",
+                                                              config.package.name,
+                                                              config.package.version));
     cook_hook(&config.cook, true);
 
     archive(&config, collect(&internal_config));
     upload(&config);
 
     cook_hook(&config.cook, false);
+    term_print(term::color::BRIGHT_GREEN, "Successfully", "cooked the crate!");
 }
 
 
@@ -109,7 +133,7 @@ fn archive(c: &CookConfig, cf: CollectedFiles) {
 
     let file_name = &format!("{}-{}", c.package.name, c.package.version);
     let archive_file_name = &format!("{}.tar", file_name);
-    let hash_file_name = &format!("{}.md5", file_name);
+    let hash_file_name = &format!("{}.md5", archive_file_name);
     // Archive
     {
         let file = File::create(archive_file_name).unwrap();
@@ -125,10 +149,13 @@ fn archive(c: &CookConfig, cf: CollectedFiles) {
     hash.input(file_bytes.as_slice());
     f = File::create(hash_file_name).unwrap();
     write!(f, "{}", hash.result_str());
+    let archive_file_path = Path::new(archive_file_name).canonicalize().unwrap();
+    term_print(term::color::BRIGHT_GREEN, "Cooked", &format!("{}", archive_file_path.display()));
 }
 
 // TODO implement uploading the cooked archives: filesystem, ssh, git, ftp, http, etc
 fn upload(c: &CookConfig) {
+    // term_print(term::color::BRIGHT_GREEN, "Uploading", "the crate.");
 }
 
 fn load_config() -> CookConfig {
@@ -151,15 +178,22 @@ fn load_config() -> CookConfig {
 
 fn cook_hook(c: &Cook, pre: bool) -> bool {
     let hook = if pre { &c.pre_cook } else { &c.post_cook };
-    let hook_name = if pre { "Pre" } else { "Post" };
+    let hook_name = if pre { "Pre-cook" } else { "Post-cook" };
 
     if let Some(ref pre) = *hook {
+        term_print(term::color::YELLOW, "Executing", hook_name);
         let res = Command::new(Path::new(pre).canonicalize().unwrap()).status();
         if let Ok(s) = res {
-            println!("{}-cook returned {}", hook_name, s);
+            if s.success() {
+                term_print(term::color::BRIGHT_GREEN, hook_name, &format!("returned {}",
+                                                                          s.code().unwrap_or(0i32)));
+            } else {
+                term_print(term::color::BRIGHT_RED, hook_name, &format!("returned {}",
+                                                                        s.code().unwrap_or(0i32)));
+            }
             return s.success()
         } else {
-            panic!("{}-cook failed: {}", hook_name, res.unwrap_err());
+            panic!("{} failed: {}", hook_name, res.unwrap_err());
         }
     }
 

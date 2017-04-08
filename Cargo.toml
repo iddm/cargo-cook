@@ -16,6 +16,7 @@ containers = ["tar"]
 pre_cook = "pre_cook.sh"
 post_cook = "post_cook.sh"
 include_dependencies = true
+cook_directory = "cooked"
 
 [[cook.ingredient]]
 source = "Cargo.toml"       # Regex
@@ -32,3 +33,4 @@ serde_derive = "0.9"
 regex = "0.2"
 tar = "0.4"
 rust-crypto = "0.2"
+term = "0.4"
