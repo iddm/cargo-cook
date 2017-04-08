@@ -133,11 +133,12 @@ fn archive(c: &CookConfig, cf: CollectedFiles) {
     let file_name = &format!("{}-{}", c.package.name, c.package.version);
     let archive_file_name = &format!("{}.tar", file_name);
     let hash_file_name = &format!("{}.md5", archive_file_name);
+    let target_file = &format!("{}/{}", c.cook.target_directory, c.package.name);
     // Archive
     {
         let file = File::create(archive_file_name).unwrap();
         let mut ar = Builder::new(file);
-        ar.append_path(&format!("{}/{}", c.cook.target_directory, c.package.name)).unwrap();
+        ar.append_file(&c.package.name, &mut File::open(target_file).unwrap()).unwrap();
     }
 
     // Hash
