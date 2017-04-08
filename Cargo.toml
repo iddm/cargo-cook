@@ -1,0 +1,34 @@
+[package]
+name = "cargo-cook"
+version = "0.1.0"
+authors = ["Victor Polevoy <fx@thefx.co>"]
+readme = "README.md"
+repository = "https://github.com/vityafx/cargo-cook"
+homepage = "https://github.com/vityafx/cargo-cook"
+license = "MIT/Apache-2.0"
+description = "A third-party cargo extension to allow you to open a dependent crate in your $EDITOR"
+
+[cook]
+target_directory = "target/release"
+target_rename = "cargocook"
+hashes = ["md5"]
+containers = ["tar"]
+pre_cook = "pre_cook.sh"
+post_cook = "post_cook.sh"
+include_dependencies = true
+
+[[cook.ingredient]]
+source = "Cargo.toml"       # Regex
+destination = "Cargo.toml"  # String
+
+[[bin]]
+name = "cargo-cook"
+
+[dependencies]
+clap = "2.23"
+toml = "0.3"
+serde = "0.9"
+serde_derive = "0.9"
+regex = "0.2"
+tar = "0.4"
+rust-crypto = "0.2"

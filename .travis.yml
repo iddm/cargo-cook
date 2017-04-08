@@ -1,0 +1,29 @@
+language: rust
+
+rust:
+  - stable
+  - beta
+  - nightly
+
+sudo: false
+
+script:
+  - cargo build
+  - RUST_TEST_THREADS=1 cargo test
+
+os:
+  - linux
+  - osx
+
+branches:
+  only:
+    - master
+
+addons:
+  apt:
+    sources:
+      - kalakris-cmake
+    packages:
+      - cmake
+      - g++-multilib
+      - lib32stdc++6
