@@ -1,6 +1,6 @@
 [package]
 name = "cargo-cook"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Victor Polevoy <fx@thefx.co>"]
 readme = "README.md"
 repository = "https://github.com/vityafx/cargo-cook"
@@ -16,7 +16,7 @@ containers = ["tar"]
 pre_cook = "pre_cook.sh"
 post_cook = "post_cook.sh"
 include_dependencies = true
-cook_directory = "cooked"
+cook_directory = "cooked/"
 
 [[cook.ingredient]]
 source = "Cargo.toml"       # Regex

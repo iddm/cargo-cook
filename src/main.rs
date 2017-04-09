@@ -40,6 +40,7 @@ struct Cook {
     pre_cook: Option<String>,
     post_cook: Option<String>,
     include_dependencies: Option<bool>,
+    cook_directory: String,
     ingredient: Option<Vec<CookIngredient>>,
 }
 
@@ -130,15 +131,23 @@ fn archive(c: &CookConfig, cf: CollectedFiles) {
     use crypto::digest::Digest;
     use crypto::md5::Md5;
 
-    let file_name = &format!("{}-{}", c.package.name, c.package.version);
+    std::fs::create_dir_all(&c.cook.cook_directory).unwrap();
+
+    let file_name = &format!("{}/{}-{}",
+                             c.cook.cook_directory,
+                             c.package.name,
+                             c.package.version);
     let archive_file_name = &format!("{}.tar", file_name);
     let hash_file_name = &format!("{}.md5", archive_file_name);
-    let target_file = &format!("{}/{}", c.cook.target_directory, c.package.name);
+    let target_file_name = &format!("{}/{}", c.cook.target_directory, c.package.name);
+    let renamed_target_file_name = if let Some(ref s) = c.cook.target_rename { s }
+                                   else { &c.package.name };
     // Archive
     {
         let file = File::create(archive_file_name).unwrap();
         let mut ar = Builder::new(file);
-        ar.append_file(&c.package.name, &mut File::open(target_file).unwrap()).unwrap();
+        ar.append_file(renamed_target_file_name,
+                       &mut File::open(target_file_name).unwrap()).unwrap();
     }
 
     // Hash
