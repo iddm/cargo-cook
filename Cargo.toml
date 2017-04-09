@@ -1,6 +1,6 @@
 [package]
 name = "cargo-cook"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Victor Polevoy <fx@thefx.co>"]
 readme = "README.md"
 repository = "https://github.com/vityafx/cargo-cook"
@@ -11,7 +11,7 @@ description = "A third-party cargo extension which allows you to cook your crate
 [cook]
 target_directory = "target/release"
 target_rename = "cargocook"
-hashes = ["md5"]
+hashes = ["md5", "sha256", "sha512"]
 containers = ["tar"]
 pre_cook = "pre_cook.sh"
 post_cook = "post_cook.sh"
@@ -34,3 +34,4 @@ regex = "0.2"
 tar = "0.4"
 rust-crypto = "0.2"
 term = "0.4"
+lazy_static = "0.2"

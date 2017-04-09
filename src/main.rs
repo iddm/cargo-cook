@@ -2,12 +2,15 @@
 extern crate clap;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
+extern crate lazy_static;
 extern crate serde;
 extern crate toml;
 extern crate regex;
-extern crate tar;
-extern crate crypto;
 extern crate term;
+
+mod hash;
+mod container;
 
 use clap::{ App, AppSettings, SubCommand };
 use regex::Regex;
@@ -16,10 +19,7 @@ use std::fs::File;
 use std::io::{ Read, Write };
 use std::path::Path;
 use std::process::Command;
-use std::collections::BTreeMap;
 use std::panic;
-
-type CollectedFiles = BTreeMap<String, String>;
 
 const CONFIG_FILE_NAME: &'static str = "Cargo.toml";
 const COMMAND_NAME: &'static str = "cook";
@@ -89,7 +89,7 @@ fn term_print(color: term::color::Color, status_text: &str, text: &str) {
     t.attr(term::Attr::Bold).unwrap();
     t.fg(color).unwrap();
     write!(t, "{} ", status_text).unwrap();
-    t.reset();
+    let _ = t.reset();
     write!(t, "{}\n", text).unwrap();
 }
 
@@ -106,7 +106,7 @@ fn cook() {
     term_print(term::color::BRIGHT_GREEN, "Cooking", pkg_name);
     cook_hook(&config.cook, true);
 
-    archive(&config, collect(&internal_config));
+    archive(&config, collect(&config, &internal_config));
     upload(&config);
 
     cook_hook(&config.cook, false);
@@ -115,51 +115,41 @@ fn cook() {
 
 
 // TODO iterate over all of ingredients, return source -> destination (parse regexp)
-fn collect(c: &InternalConfig) -> CollectedFiles {
-    // for (s, d) in c.ingredients {
+fn collect(c: &CookConfig, ic: &InternalConfig) -> container::Files {
+    let mut files = container::Files::new();
+    // for (s, d) in ic.ingredients {
     // }
-    CollectedFiles::default()
+    
+    let target_file_name = format!("{}/{}", c.cook.target_directory, c.package.name);
+    let renamed_target_file_name = if let Some(s) = c.cook.target_rename.clone() { s }
+                                   else { c.package.name.clone() };
+    files.push((renamed_target_file_name, target_file_name));
+    files
 }
 
-// TODO iterate over `c.cook.containers` and create an archive for each of specified container.
-// TODO move from `tar` crate to something common like `libarchive`.
-fn archive(c: &CookConfig, cf: CollectedFiles) {
-    // for c in &c.cook.containers {
-    //
-    // }
-    use tar::Builder;
-    use crypto::digest::Digest;
-    use crypto::md5::Md5;
-
+fn archive(c: &CookConfig, cf: container::Files) {
     std::fs::create_dir_all(&c.cook.cook_directory).unwrap();
 
-    let file_name = &format!("{}/{}-{}",
-                             c.cook.cook_directory,
-                             c.package.name,
-                             c.package.version);
-    let archive_file_name = &format!("{}.tar", file_name);
-    let hash_file_name = &format!("{}.md5", archive_file_name);
-    let target_file_name = &format!("{}/{}", c.cook.target_directory, c.package.name);
-    let renamed_target_file_name = if let Some(ref s) = c.cook.target_rename { s }
-                                   else { &c.package.name };
-    // Archive
-    {
-        let file = File::create(archive_file_name).unwrap();
-        let mut ar = Builder::new(file);
-        ar.append_file(renamed_target_file_name,
-                       &mut File::open(target_file_name).unwrap()).unwrap();
-    }
+    for cont in &c.cook.containers {
+        let file_name = &format!("{}/{}-{}",
+                                 c.cook.cook_directory,
+                                 c.package.name,
+                                 c.package.version);
+        let archive_file_name = &format!("{}.{}", file_name, cont);
+        // Archive
+        container::compress(&cf, archive_file_name, cont);
 
-    // Hash
-    let mut hash = Md5::new();
-    let mut file_bytes = Vec::new();
-    let mut f = File::open(archive_file_name).unwrap();
-    f.read_to_end(&mut file_bytes);
-    hash.input(file_bytes.as_slice());
-    f = File::create(hash_file_name).unwrap();
-    writeln!(f, "{}", hash.result_str());
-    let archive_file_path = Path::new(archive_file_name).canonicalize().unwrap();
-    term_print(term::color::BRIGHT_GREEN, "Cooked", &format!("{}", archive_file_path.display()));
+        // Hash
+        if let Some(ref hashes) = c.cook.hashes {
+            for hash_type in hashes {
+                let hash_file_name = &format!("{}.{}", archive_file_name, hash_type);
+                hash::write_file_hash(archive_file_name, hash_file_name, hash_type);
+            }
+        }
+
+        let archive_file_path = Path::new(archive_file_name).canonicalize().unwrap();
+        term_print(term::color::BRIGHT_GREEN, "Cooked", &format!("{}", archive_file_path.display()));
+    }
 }
 
 // TODO implement uploading the cooked archives: filesystem, ssh, git, ftp, http, etc
@@ -212,9 +202,17 @@ fn cook_hook(c: &Cook, pre: bool) -> bool {
 fn parse_config(c: &CookConfig) -> InternalConfig {
     let mut ic = InternalConfig::default();
 
+    for cont in &c.cook.containers {
+        if !container::support_container(cont) {
+            panic!("The {} container type is unsupported.", cont);
+        }
+    }
+
     if let Some(ref hashes) = c.cook.hashes {
         for h in hashes {
-            // TODO if we don't support specified hasher - panic!
+            if !hash::support_hash_type(h) {
+                panic!("The {} hash type is unsupported.", h);
+            }
         }
     }
 
