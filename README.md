@@ -4,7 +4,7 @@
 
 A third-party cargo extension which lets you cook your crate. What it does:
 
-1. Collecting all the files you specified (ingredients) as same as crate's artifact (binary or a library).
+1. Collects all the files you specified (ingredients) as same as crate's artifact (binary or a library).
 2. Puts everything from `.1` into a container with possible compression.
 3. Calculates hash-sums for each of container from `.2`.
 4. Uploads all the files from `.3` into desired location (not implemented yet).
