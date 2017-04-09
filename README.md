@@ -60,6 +60,38 @@ destination = "licenses/"
 - `filter` **(Optional)** - a regular expression which will be used to determine the ingredients.
 - `destination` - a string which is a path to file or a directory. If `source` is a file then `destination` is also a file, otherwise it is a directory where files from `source` directory will be put.
 
+So, if you will just perform `cargo cook` in the directory with the `cargo cook` crate with the configuration described above it will give you:
+
+```bash
+$ cd cargo-cook
+
+$ cargo cook
+  Cooking cargo-cook v0.1.5
+  Executing Pre-cook
+  Hello from pre_cook.sh
+  Pre-cook returned 0
+  Cooked /home/workspace/cargo-cook/cooked/cargo-cook-0.1.5.tar
+  Executing Post-cook
+  Hello from post_cook.sh
+  Post-cook returned 0
+  Finished cooking
+
+$ ls cooked/
+  cargo-cook-0.1.5.tar
+  cargo-cook-0.1.5.tar.md5
+  cargo-cook-0.1.5.tar.sha256
+  cargo-cook-0.1.5.tar.sha512
+
+$ tar -xvf cargo-cook-0.1.5.tar
+  Cargo.toml
+  src/main.rs
+  src/container.rs
+  src/hash.rs
+  licenses/LICENSE-APACHE
+  licenses/LICENSE-MIT
+  cargocook
+```
+
 # Compiling
 
 Assuming you already have Rust and cargo set up.
