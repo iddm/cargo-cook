@@ -2,7 +2,59 @@
 
 [![Build Status](https://travis-ci.org/vityafx/cargo-cook.svg?branch=master)](https://travis-ci.org/vityafx/cargo-cook)
 
-A third-party cargo extension to allow you to cook your crate.
+A third-party cargo extension which lets you cook your crate. What it does:
+
+1. Collecting all the files you specified (ingredients) as same as crate's artifact (binary or a library).
+2. Puts everything from `.1` into a container with possible compression.
+3. Calculates hash-sums for each of container from `.2`.
+4. Uploads all the files from `.3` into desired location (not implemented yet).
+
+# Configuring
+
+To make it work with your crate you must add additional sections and fields into your `Cargo.toml`.
+Let's at the [`Cargo.toml`](https://github.com/vityafx/cargo-cook/blob/master/Cargo.toml) of `cook` crate:
+
+```toml
+[cook]
+target_directory = "target/release"
+target_rename = "cargocook"
+hashes = ["md5", "sha256", "sha512"]
+containers = ["tar"]
+pre_cook = "pre_cook.sh"
+post_cook = "post_cook.sh"
+include_dependencies = true
+cook_directory = "cooked/"
+
+# If source is a file then it will be copied to the destination.
+# If the source is a directory then the destination field is also a directory and `filter` field can be used to determine which files to take.
+[[cook.ingredient]]
+source = "Cargo.toml"
+destination = "Cargo.toml"
+
+[[cook.ingredient]]
+source = "src"
+destination = "src"
+
+[[cook.ingredient]]
+source = "./"
+filter = "(LICENSE-*)"
+destination = "licenses/"
+```
+
+**Cook**
+- `target_directory` - a directory where to find your crate artifacts.
+- `target_rename` **(Optional)** - rename the target file before packaging into a container.
+- `hashes` **(Optional)** - a list of hash-sum algorithms which will be used for calculating hashsumm of the containers.
+- `containers` - a list of containers into which your ingredients will be packed.
+- `pre_cook` **(Optional)** - a script which will be executed before cooking.
+- `post_cook` **(Optional)** - a script which will be executed after cooking.
+- `include_dependencies` **(Optional)** - include crate dependencies into the container.
+- `cook_directory` - a directory where containers will be put.
+
+**Ingredient**
+- `source` - a string which is a path to file or a directory. If it is a directory then `filter` field may be used.
+- `filter` **(Optional)** - a regular expression which will be used to determine the ingredients.
+- `destination` - a string which is a path to file or a directory. If `source` is a file then `destination` is also a file, otherwise it is a directory where files from `source` directory will be put.
 
 # Compiling
 
