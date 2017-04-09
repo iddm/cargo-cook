@@ -9,6 +9,10 @@ A third-party cargo extension which lets you cook your crate. What it does:
 3. Calculates hash-sums for each of container from `.2`.
 4. Uploads all the files from `.3` into desired location (not implemented yet).
 
+If you still have not understood what is it then just read this:
+
+> After building a crate you have a produced binary file (or a library). You may want to upload it somewhere for further downloading and use. For example, you have made a game called `rustquake` in pure Rust. You want to release it so you compile it in release mode with all optimizations and then you may want to upload the binary (and some other files like config files, libraries, images, shaders, etc) somewhere. It would also be nice to compress all of this. So, you manually create an archive, for example, `rustquake-0.1.1.tar.gz` where you manually put all the files you need. Then you go to your server, put the archive in some folder which your web-server knows about manually again. This is a lot of routine work. But all ot these steps may be performed automatically by the `cargo cook`.
+
 # Configuring
 
 To make it work with your crate you must add additional sections and fields into your `Cargo.toml`.
