@@ -16,7 +16,7 @@ If you still have not understood what is it then just read this:
 # Configuring
 
 To make it work with your crate you must add additional sections and fields into your `Cargo.toml`.
-Let's at the [`Cargo.toml`](https://github.com/vityafx/cargo-cook/blob/master/Cargo.toml) of `cook` crate:
+Let's look at the [`Cargo.toml`](https://github.com/vityafx/cargo-cook/blob/master/Cargo.toml) of `cook` crate:
 
 ```toml
 [cook]
