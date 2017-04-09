@@ -19,6 +19,7 @@ use std::fs::File;
 use std::io::{ Read, Write };
 use std::path::Path;
 use std::process::Command;
+#[cfg(not(debug_assertions))]
 use std::panic;
 
 const CONFIG_FILE_NAME: &'static str = "Cargo.toml";
@@ -28,6 +29,7 @@ const COMMAND_DESCRIPTION: &'static str = "A third-party cargo extension which c
 #[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
 struct CookIngredient {
     source: String,
+    filter: Option<String>,
     destination: String,
 }
 
@@ -56,14 +58,9 @@ struct CookConfig {
     cook: Cook,
 }
 
-#[derive(Default, Debug, Clone)]
-struct InternalConfig {
-    ingredients: Vec<(Regex, String)>, // Source regexp, destination path
-}
-
 fn main() {
+    #[cfg(not(debug_assertions))]
     panic::set_hook(Box::new(|panic_info| {
-        // println!("{:?}", panic_info.payload().downcast_ref::<String>().unwrap());
         term_panic(panic_info.payload().downcast_ref::<String>().unwrap());
     }));
 
@@ -93,6 +90,7 @@ fn term_print(color: term::color::Color, status_text: &str, text: &str) {
     write!(t, "{}\n", text).unwrap();
 }
 
+#[cfg(not(debug_assertions))]
 fn term_panic(text: &str) {
     term_print(term::color::BRIGHT_RED, "Failure:", text);
 }
@@ -101,24 +99,61 @@ fn cook() {
     let config = load_config();
     #[cfg(debug_assertions)]
     println!("Config: {:?}", config);
-    let internal_config = parse_config(&config);
+    parse_config(&config);
     let pkg_name = &format!("{} v{}", config.package.name, config.package.version);
     term_print(term::color::BRIGHT_GREEN, "Cooking", pkg_name);
     cook_hook(&config.cook, true);
 
-    archive(&config, collect(&config, &internal_config));
+    archive(&config, collect(&config));
     upload(&config);
 
     cook_hook(&config.cook, false);
     term_print(term::color::BRIGHT_GREEN, "Finished", "cooking");
 }
 
+fn collect_recursively(source: &str, destination: &str, files: &mut container::Files) {
+    use std::fs;
 
-// TODO iterate over all of ingredients, return source -> destination (parse regexp)
-fn collect(c: &CookConfig, ic: &InternalConfig) -> container::Files {
+    let path = Path::new(source);
+    if !path.is_dir() {
+        panic!("{} is not a directory!", path.display());
+    }
+    for entry in fs::read_dir(path).unwrap() {
+        let e = entry.unwrap();
+        let name = e.file_name().into_string().unwrap();
+        files.push((format!("{}/{}", destination.to_owned(), name),
+                    e.path().to_str().unwrap().to_owned()));
+    }
+}
+
+fn collect(c: &CookConfig) -> container::Files {
+    use std::fs;
+
     let mut files = container::Files::new();
-    // for (s, d) in ic.ingredients {
-    // }
+    if let Some(ref ingredients) = c.cook.ingredient {
+        for i in ingredients {
+            let path = Path::new(&i.source);
+            if path.is_file() {
+                files.push((i.source.clone(), i.destination.clone()));
+            } else if path.is_dir() {
+                if let Some(ref filter) = i.filter {
+                    let r = Regex::new(filter).unwrap();
+                    for entry in fs::read_dir(path).unwrap() {
+                        let e = entry.unwrap();
+                        let name = e.file_name().into_string().unwrap();
+                        if r.is_match(&name) {
+                            files.push((format!("{}/{}", i.destination.clone(), name),
+                                        e.path().to_str().unwrap().to_owned()));
+                        }
+                    }
+                } else {
+                    collect_recursively(&i.source, &i.destination, &mut files);
+                }
+            } else {
+                panic!("Specified ingredient ({}) is neither a file nor a directory.", i.source);
+            }
+        }
+    }
     
     let target_file_name = format!("{}/{}", c.cook.target_directory, c.package.name);
     let renamed_target_file_name = if let Some(s) = c.cook.target_rename.clone() { s }
@@ -199,9 +234,7 @@ fn cook_hook(c: &Cook, pre: bool) -> bool {
     return true
 }
 
-fn parse_config(c: &CookConfig) -> InternalConfig {
-    let mut ic = InternalConfig::default();
-
+fn parse_config(c: &CookConfig) {
     for cont in &c.cook.containers {
         if !container::support_container(cont) {
             panic!("The {} container type is unsupported.", cont);
@@ -216,11 +249,4 @@ fn parse_config(c: &CookConfig) -> InternalConfig {
         }
     }
 
-    if let Some(ref is) = c.cook.ingredient {
-        for i in is {
-            ic.ingredients.push((Regex::new(&i.source).unwrap(), i.destination.clone()));
-        }
-    }
-
-    ic
 }

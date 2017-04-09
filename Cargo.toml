@@ -18,9 +18,20 @@ post_cook = "post_cook.sh"
 include_dependencies = true
 cook_directory = "cooked/"
 
+# If source is a file then it will be copied to the destination.
+# If the source is a directory then the destination field is also a directory and `filter` field can be used to determine which files to take.
 [[cook.ingredient]]
-source = "Cargo.toml"       # Regex
-destination = "Cargo.toml"  # String
+source = "Cargo.toml"
+destination = "Cargo.toml"
+
+[[cook.ingredient]]
+source = "src"
+destination = "src"
+
+[[cook.ingredient]]
+source = "./"
+filter = "(LICENSE-*)"
+destination = "licenses/"
 
 [[bin]]
 name = "cargo-cook"
