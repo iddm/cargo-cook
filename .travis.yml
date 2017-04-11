@@ -1,29 +1,26 @@
 language: rust
-
-rust:
-  - stable
-  - beta
-  - nightly
+matrix:
+    fast_finish: true
+    include:
+        - rust: nightly
+        - rust: beta
+        - rust: stable
 
 sudo: false
 
+cache:
+    apt: true
+    directories:
+        - $TRAVIS_BUILD_DIR/target
+        - $HOME/.cargo
+
 script:
-  - cargo build
-  - RUST_TEST_THREADS=1 cargo test
-
-os:
-  - linux
-  - osx
-
-branches:
-  only:
-    - master
+  - cargo test --verbose $FEATURES -- --nocapture
 
 addons:
   apt:
-    sources:
-      - kalakris-cmake
     packages:
-      - cmake
-      - g++-multilib
-      - lib32stdc++6
+      - openssl-dev
+
+notifications:
+email: false
