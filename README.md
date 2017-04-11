@@ -1,7 +1,5 @@
 # `cargo cook`
 
-[![Build Status](https://travis-ci.org/vityafx/cargo-cook.svg?branch=master)](https://travis-ci.org/vityafx/cargo-cook)
-
 [![](https://meritbadge.herokuapp.com/cargo-cook)](https://crates.io/crates/cargo-cook) [![](https://travis-ci.org/vityafx/cargo-cook.svg?branch=master)](https://travis-ci.org/vityafx/cargo-cook)
 
 A third-party cargo extension which lets you cook your crate. What it does:
