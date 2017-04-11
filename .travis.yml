@@ -17,10 +17,5 @@ cache:
 script:
   - cargo test --verbose $FEATURES -- --nocapture
 
-addons:
-  apt:
-    packages:
-      - openssl-dev
-
 notifications:
 email: false
