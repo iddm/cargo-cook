@@ -30,7 +30,8 @@ use config::*;
 use term_print::*;
 
 
-const CONFIG_FILE_NAME: &'static str = "Cargo.toml";
+const CONFIG_FILE_NAME: &'static str = "Cook.toml";
+const CARGO_TOML: &'static str = "Cargo.toml";
 const COMMAND_NAME: &'static str = "cook";
 const COMMAND_DESCRIPTION: &'static str = "A third-party cargo extension which cooks your crate.";
 
@@ -58,19 +59,20 @@ fn main() {
 }
 
 fn cook() {
-    let config = load_config();
+    let cook_config = load_config::<CookConfig>(CONFIG_FILE_NAME);
+    let cargo_config = load_config::<CargoConfig>(CARGO_TOML);
     #[cfg(debug_assertions)]
-    println!("Config: {:?}", config);
-    parse_config(&config);
-    let pkg_name = &format!("{} v{}", config.package.name, config.package.version);
+    println!("Config: {:?}", cook_config);
+    parse_config(&cook_config);
+    let pkg_name = &format!("{} v{}", cargo_config.package.name, cargo_config.package.version);
     term_println(term::color::BRIGHT_GREEN, "Cooking", pkg_name);
-    cook_hook(&config.cook, true);
+    cook_hook(&cook_config.cook, true);
 
-    archive(&config, collect(&config));
+    archive(&cook_config, &cargo_config, collect(&cook_config, &cargo_config));
     #[cfg(feature = "deploy")]
-    deploy(&config);
+    deploy(&cook_config);
 
-    cook_hook(&config.cook, false);
+    cook_hook(&cook_config.cook, false);
     term_println(term::color::BRIGHT_GREEN, "Finished", "cooking");
 }
 
@@ -89,7 +91,7 @@ fn collect_recursively(source: &str, destination: &str, files: &mut container::F
     }
 }
 
-fn collect(c: &CookConfig) -> container::Files {
+fn collect(c: &CookConfig, cargo: &CargoConfig) -> container::Files {
     use std::fs;
 
     let mut files = container::Files::new();
@@ -118,21 +120,21 @@ fn collect(c: &CookConfig) -> container::Files {
         }
     }
     
-    let target_file_name = format!("{}/{}", c.cook.target_directory, c.package.name);
+    let target_file_name = format!("{}/{}", c.cook.target_directory, cargo.package.name);
     let renamed_target_file_name = if let Some(s) = c.cook.target_rename.clone() { s }
-                                   else { c.package.name.clone() };
+                                   else { cargo.package.name.clone() };
     files.push((renamed_target_file_name, target_file_name));
     files
 }
 
-fn archive(c: &CookConfig, cf: container::Files) {
+fn archive(c: &CookConfig, cargo: &CargoConfig, cf: container::Files) {
     std::fs::create_dir_all(&c.cook.cook_directory).unwrap();
 
     for cont in &c.cook.containers {
         let file_name = &format!("{}/{}-{}",
                                  c.cook.cook_directory,
-                                 c.package.name,
-                                 c.package.version);
+                                 cargo.package.name,
+                                 cargo.package.version);
         let archive_file_name = &format!("{}.{}", file_name, cont);
         // Archive
         container::compress(&cf, archive_file_name, cont);
@@ -169,21 +171,21 @@ fn deploy(c: &CookConfig) {
     }
 }
 
-fn load_config() -> CookConfig {
+fn load_config<T: std::fmt::Debug + serde::Deserialize>(file_name: &str) -> T {
     let mut config_toml = String::new();
-    let config_file_name = CONFIG_FILE_NAME.to_owned();
-    if let Ok(mut file) = File::open(config_file_name) {
+    let config_file_name = file_name.to_owned();
+    if let Ok(mut file) = File::open(config_file_name.clone()) {
         if let Err(e) = file.read_to_string(&mut config_toml) {
-            panic!("Unable to read {}: {}", CONFIG_FILE_NAME, e);
+            panic!("Unable to read {}: {}", config_file_name, e);
         }
     } else {
-        panic!("{} file was not found.", CONFIG_FILE_NAME);
+        panic!("{} file was not found.", config_file_name);
     }
-    let parsed = toml::de::from_str::<CookConfig>(&config_toml);
+    let parsed = toml::de::from_str::<T>(&config_toml);
     if let Ok(c) = parsed {
         return c
     } else {
-        panic!("Unable to parse {}: {}", CONFIG_FILE_NAME, parsed.unwrap_err());
+        panic!("Unable to parse {}: {}", config_file_name, parsed.unwrap_err());
     }
 }
 

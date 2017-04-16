@@ -51,6 +51,10 @@ pub struct Package {
 
 #[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
 pub struct CookConfig {
-    pub package: Package,
     pub cook: Cook,
+}
+
+#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
+pub struct CargoConfig {
+    pub package: Package,
 }

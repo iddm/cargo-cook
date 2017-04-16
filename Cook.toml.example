@@ -1,0 +1,36 @@
+[cook]
+target_directory = "target/release"
+target_rename = "cargocook"
+hashes = ["md5", "sha256", "sha512"]
+containers = ["tar", "tar.bzip2"]
+pre_cook = "pre_cook.sh"
+post_cook = "post_cook.sh"
+include_dependencies = true
+cook_directory = "cooked/"
+
+[cook.deploy]
+targets = ["fscopy", "ssh"]
+
+[cook.deploy.fscopy]
+path = "/tmp"
+
+[cook.deploy.ssh]
+hostname = "github.com:80"        # Host:port format.
+username = "vvv"
+remote_path = "/home/vvv/cooked/" # must be absolute path!
+deploy_script = "ssh_deploy.sh"   # Will be executed on remote server.
+
+# If source is a file then it will be copied to the destination.
+# If the source is a directory then the destination field is also a directory and `filter` field can be used to determine which files to take.
+[[cook.ingredient]]
+source = "Cargo.toml"
+destination = "Cargo.toml"
+
+[[cook.ingredient]]
+source = "src"
+destination = "src"
+
+[[cook.ingredient]]
+source = "./"
+filter = "(LICENSE-*)"
+destination = "licenses/"
