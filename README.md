@@ -23,11 +23,24 @@ Let's look at the [`Cargo.toml`](https://github.com/vityafx/cargo-cook/blob/mast
 target_directory = "target/release"
 target_rename = "cargocook"
 hashes = ["md5", "sha256", "sha512"]
-containers = ["tar"]
+containers = ["tar", "tar.bzip2"]
 pre_cook = "pre_cook.sh"
 post_cook = "post_cook.sh"
 include_dependencies = true
 cook_directory = "cooked/"
+
+[cook.deploy]
+targets = ["fscopy", "ssh"]
+
+[cook.deploy.fscopy]
+path = "/tmp"
+
+[cook.deploy.ssh]
+hostname = ""                           # Host:port format.
+username = ""
+remote_path = ""                        # must be absolute path!
+deploy_script = "ssh_deploy.sh"         # Will be executed on remote server.
+
 
 # If source is a file then it will be copied to the destination.
 # If the source is a directory then the destination field is also a directory and `filter` field can be used to determine which files to take.
@@ -54,6 +67,18 @@ destination = "licenses/"
 - `post_cook` **(Optional)** - a script which will be executed after cooking.
 - `include_dependencies` **(Optional)** - include crate dependencies into the container.
 - `cook_directory` - a directory where containers will be put.
+
+**Deploy**
+- `targets` - a list of deploy targets.
+
+**deploy.fscopy**
+- `path` - a string where to copy cooked files.
+
+**deploy.ssh**
+- `hostname` - a string with hostname and port (`github.com:80` for example).
+- `username` - a string with username which will be used for deploying. Password will be asked during deployment.
+- `remote_path` - a string which points to a remote path where cooked files will be copied.
+- `deploy_script` **(Optional)** - a string which will be executed on the remote server with `remote_path` as working directory.
 
 **Ingredient**
 - `source` - a string which is a path to file or a directory. If it is a directory then `filter` field may be used.
