@@ -36,7 +36,7 @@ fn bzip2(destination_file_path: &str, files: &Files) {
     let mut compressed_bytes = Vec::new();
     let mut compressor = BzEncoder::new(raw_bytes.as_slice(), Compression::Best);
     compressor.read_to_end(&mut compressed_bytes).unwrap();
-    let ratio = 100 / (raw_bytes.len() / compressed_bytes.len());
+    let ratio = 100f32 / (raw_bytes.len() as f32 / compressed_bytes.len() as f32);
     let mut compressed_archive = File::create(destination_file_path).unwrap();
     term_println(self::term::color::WHITE,
                  BZIP2_LABEL,
