@@ -16,7 +16,7 @@ If you still have not understood what is it then just read this:
 # Configuring
 
 To make it work with your crate you must create a file `Cook.toml` in the root directory of your crate.
-Let's look at the [`Cook.toml`](https://github.com/vityafx/cargo-cook/blob/master/Cook.toml) of `cargo-cook` crate:
+Let's look at the [`Cook.toml.example`](https://github.com/vityafx/cargo-cook/blob/master/Cook.toml.example) of `cargo-cook` crate:
 
 ```toml
 [cook]
