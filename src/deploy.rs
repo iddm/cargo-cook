@@ -36,7 +36,8 @@ fn fscopy(source: &str, d: &Deploy) -> Result {
         let dir = fs::read_dir(path).unwrap();
         for entry in dir {
             let e = entry.unwrap();
-            let path = e.path().to_str().unwrap();
+            let entry_path = e.path();
+            let path = entry_path.to_str().unwrap();
             if let Some(file_name) = e.file_name().to_str() {
                 term_rprint(self::term::color::WHITE,
                             FSCOPY_LABEL,
@@ -47,7 +48,7 @@ fn fscopy(source: &str, d: &Deploy) -> Result {
                 }
                 term_rprint(self::term::color::WHITE,
                             FSCOPY_LABEL,
-                            &format!("Copied \"{}\" to \"{}\"", , fscopy.path));
+                            &format!("Copied \"{}\" to \"{}\"", path, fscopy.path));
                 term_rprint_finish();
             }
         }
