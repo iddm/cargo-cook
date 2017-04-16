@@ -11,52 +11,29 @@ extern crate term;
 
 mod hash;
 mod container;
+#[cfg(feature = "deploy")]
+mod deploy;
+mod config;
+mod term_print;
 
 use clap::{ App, AppSettings, SubCommand };
 use regex::Regex;
 
 use std::fs::File;
-use std::io::{ Read, Write };
+use std::io::Read;
 use std::path::Path;
 use std::process::Command;
 #[cfg(not(debug_assertions))]
 use std::panic;
 
+use config::*;
+use term_print::*;
+
+
 const CONFIG_FILE_NAME: &'static str = "Cargo.toml";
 const COMMAND_NAME: &'static str = "cook";
 const COMMAND_DESCRIPTION: &'static str = "A third-party cargo extension which cooks your crate.";
 
-#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
-struct CookIngredient {
-    source: String,
-    filter: Option<String>,
-    destination: String,
-}
-
-#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
-struct Cook {
-    target_directory: String,
-    target_rename: Option<String>,
-    hashes: Option<Vec<String>>,
-    containers: Vec<String>,
-    pre_cook: Option<String>,
-    post_cook: Option<String>,
-    include_dependencies: Option<bool>,
-    cook_directory: String,
-    ingredient: Option<Vec<CookIngredient>>,
-}
-
-#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
-struct Package {
-    name: String,
-    version: String,
-}
-
-#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
-struct CookConfig {
-    package: Package,
-    cook: Cook,
-}
 
 fn main() {
     #[cfg(not(debug_assertions))]
@@ -80,35 +57,21 @@ fn main() {
     cook();
 }
 
-fn term_print(color: term::color::Color, status_text: &str, text: &str) {
-    let mut t = term::stdout().unwrap();
-
-    t.attr(term::Attr::Bold).unwrap();
-    t.fg(color).unwrap();
-    write!(t, "{} ", status_text).unwrap();
-    let _ = t.reset();
-    write!(t, "{}\n", text).unwrap();
-}
-
-#[cfg(not(debug_assertions))]
-fn term_panic(text: &str) {
-    term_print(term::color::BRIGHT_RED, "Failure:", text);
-}
-
 fn cook() {
     let config = load_config();
     #[cfg(debug_assertions)]
     println!("Config: {:?}", config);
     parse_config(&config);
     let pkg_name = &format!("{} v{}", config.package.name, config.package.version);
-    term_print(term::color::BRIGHT_GREEN, "Cooking", pkg_name);
+    term_println(term::color::BRIGHT_GREEN, "Cooking", pkg_name);
     cook_hook(&config.cook, true);
 
     archive(&config, collect(&config));
-    upload(&config);
+    #[cfg(feature = "deploy")]
+    deploy(&config);
 
     cook_hook(&config.cook, false);
-    term_print(term::color::BRIGHT_GREEN, "Finished", "cooking");
+    term_println(term::color::BRIGHT_GREEN, "Finished", "cooking");
 }
 
 fn collect_recursively(source: &str, destination: &str, files: &mut container::Files) {
@@ -183,13 +146,27 @@ fn archive(c: &CookConfig, cf: container::Files) {
         }
 
         let archive_file_path = Path::new(archive_file_name).canonicalize().unwrap();
-        term_print(term::color::BRIGHT_GREEN, "Cooked", &format!("{}", archive_file_path.display()));
+        term_println(term::color::BRIGHT_GREEN, "Cooked", &format!("{}", archive_file_path.display()));
     }
 }
 
 // TODO implement uploading the cooked archives: filesystem, ssh, git, ftp, http, etc
-fn upload(c: &CookConfig) {
-    // term_print(term::color::BRIGHT_GREEN, "Uploading", "the crate.");
+#[cfg(feature = "deploy")]
+fn deploy(c: &CookConfig) {
+    if let Some(ref deploy) = c.cook.deploy {
+        if let Some(ref targets) = deploy.targets {
+            term_println(term::color::BRIGHT_GREEN, "Deploying", "the crate.");
+
+            for t in targets {
+                let target_str = format!("[{}]", t);
+                if let Err(e) = deploy::deploy(t, &c.cook.cook_directory, deploy) {
+                    term_println(term::color::BRIGHT_RED, &target_str, &e);
+                } else {
+                    term_println(term::color::BRIGHT_GREEN, &target_str, "OK");
+                }
+            }
+        }
+    }
 }
 
 fn load_config() -> CookConfig {
@@ -215,15 +192,15 @@ fn cook_hook(c: &Cook, pre: bool) -> bool {
     let hook_name = if pre { "Pre-cook" } else { "Post-cook" };
 
     if let Some(ref pre) = *hook {
-        term_print(term::color::YELLOW, "Executing", hook_name);
+        term_println(term::color::YELLOW, "Executing", hook_name);
         let res = Command::new(Path::new(pre).canonicalize().unwrap()).status();
         if let Ok(s) = res {
             if s.success() {
-                term_print(term::color::BRIGHT_GREEN, hook_name, &format!("returned {}",
-                                                                          s.code().unwrap_or(0i32)));
+                term_println(term::color::BRIGHT_GREEN, hook_name, &format!("returned {}",
+                                                                            s.code().unwrap_or(0i32)));
             } else {
-                term_print(term::color::BRIGHT_RED, hook_name, &format!("returned {}",
-                                                                        s.code().unwrap_or(0i32)));
+                term_println(term::color::BRIGHT_RED, hook_name, &format!("returned {}",
+                                                                          s.code().unwrap_or(0i32)));
             }
             return s.success()
         } else {
@@ -237,16 +214,31 @@ fn cook_hook(c: &Cook, pre: bool) -> bool {
 fn parse_config(c: &CookConfig) {
     for cont in &c.cook.containers {
         if !container::support_container(cont) {
-            panic!("The {} container type is unsupported.", cont);
+            panic!("The \"{}\" container type is unsupported.", cont);
         }
     }
 
     if let Some(ref hashes) = c.cook.hashes {
         for h in hashes {
             if !hash::support_hash_type(h) {
-                panic!("The {} hash type is unsupported.", h);
+                panic!("The \"{}\" hash type is unsupported.", h);
             }
         }
     }
 
+    #[cfg(feature = "deploy")]
+    let check_deploy = |c: &CookConfig| {
+        if let Some(ref deploy) = c.cook.deploy {
+            if let Some(ref targets) = deploy.targets {
+                for t in targets {
+                    if !deploy::support_deploy_target(t) {
+                        panic!("The \"{}\" deploy target is unsupported.", t);
+                    }
+                }
+            }
+        }
+    };
+
+    #[cfg(feature = "deploy")]
+    check_deploy(&c);
 }

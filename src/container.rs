@@ -1,26 +1,61 @@
 extern crate tar;
+#[cfg(feature = "bzip2")]
+extern crate bzip2;
+extern crate term;
 
-use std::fs::File;
 use std::collections::HashMap;
 
 pub type Files = Vec<(String, String)>;
+
 
 lazy_static! {
     static ref CONTAINERS: HashMap<&'static str, fn(&str, &Files)> = {
         let mut m = HashMap::new();
         m.insert("tar", tar as fn(&str, &Files));
+        #[cfg(feature = "bzip2")]
+        m.insert("tar.bzip2", bzip2 as fn(&str, &Files));
         m
     };
 }
 
+#[cfg(feature = "bzip2")]
+fn bzip2(destination_file_path: &str, files: &Files) {
+    use std::fs::File;
+    use std::io::{ Write, Read };
+    use self::bzip2::Compression;
+    use self::bzip2::read::BzEncoder;
+    use term_print::*;
+
+    const TEMP_FILE: &'static str = "/tmp/cooked.tar";
+    const BZIP2_LABEL: &'static str = "[bzip2]";
+
+    tar(TEMP_FILE, files);
+    let mut tar_file = File::open(TEMP_FILE).unwrap();
+    let mut raw_bytes = Vec::new();
+    tar_file.read_to_end(&mut raw_bytes).unwrap();
+    let mut compressed_bytes = Vec::new();
+    let mut compressor = BzEncoder::new(raw_bytes.as_slice(), Compression::Best);
+    compressor.read_to_end(&mut compressed_bytes).unwrap();
+    let ratio = 100 / (raw_bytes.len() / compressed_bytes.len());
+    let mut compressed_archive = File::create(destination_file_path).unwrap();
+    term_println(self::term::color::WHITE,
+                 BZIP2_LABEL,
+                 &format!("Compressed ratio: {:.2}%", ratio));
+    compressed_archive.write_all(compressed_bytes.as_slice()).unwrap();
+}
+
 fn tar(destination_file_path: &str, files: &Files) {
+    use std::fs::File;
     use self::tar::Builder;
 
     let file = File::create(destination_file_path).unwrap();
     let mut ar = Builder::new(file);
     for f in files {
-        ar.append_file(&f.0,
-                       &mut File::open(&f.1).unwrap()).unwrap();
+        if let Ok(mut dest_file) = File::open(&f.1) {
+            ar.append_file(&f.0, &mut dest_file).unwrap();
+        } else {
+            panic!("No such file or directory: {}", f.1);
+        }
     }
 }
 

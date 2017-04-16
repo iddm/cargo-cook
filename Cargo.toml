@@ -1,6 +1,6 @@
 [package]
 name = "cargo-cook"
-version = "0.1.5"
+version = "0.2.0"
 authors = ["Victor Polevoy <fx@thefx.co>"]
 readme = "README.md"
 repository = "https://github.com/vityafx/cargo-cook"
@@ -12,11 +12,23 @@ description = "A third-party cargo extension which allows you to cook your crate
 target_directory = "target/release"
 target_rename = "cargocook"
 hashes = ["md5", "sha256", "sha512"]
-containers = ["tar"]
+containers = ["tar", "tar.bzip2"]
 pre_cook = "pre_cook.sh"
 post_cook = "post_cook.sh"
 include_dependencies = true
 cook_directory = "cooked/"
+
+[cook.deploy]
+targets = ["fscopy", "ssh"]
+
+[cook.deploy.fscopy]
+path = "/tmp"
+
+[cook.deploy.ssh]
+hostname = ""                           # Host:port format.
+username = ""
+remote_path = ""                        # must be absolute path!
+deploy_script = "ssh_deploy.sh"         # Will be executed on remote server.
 
 # If source is a file then it will be copied to the destination.
 # If the source is a directory then the destination field is also a directory and `filter` field can be used to determine which files to take.
@@ -46,3 +58,19 @@ tar = "0.4"
 rust-crypto = "0.2"
 term = "0.4"
 lazy_static = "0.2"
+rpassword = "0.4"
+sysconf = "0.1.2"
+
+[features]
+default = ["compression", "deploy"]
+compression = ["bzip2"]
+deploy = ["ssh"]
+ssh = ["ssh2"]
+
+[dependencies.bzip2]
+version = "0.3"
+optional = true
+
+[dependencies.ssh2]
+version = "0.3"
+optional = true
