@@ -16,6 +16,13 @@ cache:
 
 script:
   - cargo test --verbose $FEATURES -- --nocapture
+  
+addons:
+  apt:
+    packages:
+      - libssh-dev
+      - libssl-dev
+
 
 notifications:
 email: false
