@@ -2,7 +2,7 @@ extern crate crypto;
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{ Read, Write };
+use std::io::{Read, Write};
 
 use self::crypto::digest::Digest;
 

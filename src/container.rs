@@ -1,12 +1,11 @@
-extern crate tar;
 #[cfg(feature = "bzip2")]
 extern crate bzip2;
+extern crate tar;
 extern crate term;
 
 use std::collections::HashMap;
 
 pub type Files = Vec<(String, String)>;
-
 
 lazy_static! {
     static ref CONTAINERS: HashMap<&'static str, fn(&str, &Files)> = {
@@ -21,7 +20,7 @@ lazy_static! {
 #[cfg(feature = "bzip2")]
 fn bzip2(destination_file_path: &str, files: &Files) {
     use std::fs::File;
-    use std::io::{ Write, Read };
+    use std::io::{Read, Write};
     use self::bzip2::Compression;
     use self::bzip2::read::BzEncoder;
     use term_print::*;
@@ -38,10 +37,14 @@ fn bzip2(destination_file_path: &str, files: &Files) {
     compressor.read_to_end(&mut compressed_bytes).unwrap();
     let ratio = 100f32 / (raw_bytes.len() as f32 / compressed_bytes.len() as f32);
     let mut compressed_archive = File::create(destination_file_path).unwrap();
-    term_println(self::term::color::WHITE,
-                 BZIP2_LABEL,
-                 &format!("Compressed ratio: {:.2}%", ratio));
-    compressed_archive.write_all(compressed_bytes.as_slice()).unwrap();
+    term_println(
+        self::term::color::WHITE,
+        BZIP2_LABEL,
+        &format!("Compressed ratio: {:.2}%", ratio),
+    );
+    compressed_archive
+        .write_all(compressed_bytes.as_slice())
+        .unwrap();
 }
 
 fn tar(destination_file_path: &str, files: &Files) {

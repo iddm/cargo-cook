@@ -1,14 +1,14 @@
 #[cfg(feature = "ssh")]
-extern crate ssh2;
-#[cfg(feature = "ssh")]
 extern crate rpassword;
-extern crate term;
+#[cfg(feature = "ssh")]
+extern crate ssh2;
 extern crate sysconf;
+extern crate term;
 
 use std::collections::HashMap;
 use std::result::Result as StdResult;
 use config::Deploy;
-use self::sysconf::{ SysconfVariable, sysconf };
+use self::sysconf::{sysconf, SysconfVariable};
 
 pub type Result = StdResult<(), String>;
 
@@ -21,7 +21,7 @@ lazy_static! {
         m
     };
 
-    static ref PAGE_SIZE: i64 = sysconf(SysconfVariable::ScPagesize).unwrap();
+    static ref PAGE_SIZE: isize = sysconf(SysconfVariable::ScPagesize).unwrap();
 }
 
 fn fscopy(source: &str, d: &Deploy) -> Result {
@@ -39,29 +39,33 @@ fn fscopy(source: &str, d: &Deploy) -> Result {
             let entry_path = e.path();
             let path = entry_path.to_str().unwrap();
             if let Some(file_name) = e.file_name().to_str() {
-                term_rprint(self::term::color::WHITE,
-                            FSCOPY_LABEL,
-                            &format!("Copying \"{}\" to \"{}\"", path, fscopy.path));
+                term_rprint(
+                    self::term::color::WHITE,
+                    FSCOPY_LABEL,
+                    &format!("Copying \"{}\" to \"{}\"", path, fscopy.path),
+                );
                 if let Err(err) = fs::copy(e.path(), &format!("{}/{}", fscopy.path, file_name)) {
                     term_rprint_finish();
-                    return Err(err.to_string())
+                    return Err(err.to_string());
                 }
-                term_rprint(self::term::color::WHITE,
-                            FSCOPY_LABEL,
-                            &format!("Copied \"{}\" to \"{}\"", path, fscopy.path));
+                term_rprint(
+                    self::term::color::WHITE,
+                    FSCOPY_LABEL,
+                    &format!("Copied \"{}\" to \"{}\"", path, fscopy.path),
+                );
                 term_rprint_finish();
             }
         }
     }
-    
+
     Ok(())
 }
 
 #[cfg(feature = "ssh")]
 fn ssh(source: &str, d: &Deploy) -> Result {
     use std::path::Path;
-    use std::fs::{ self, File };
-    use std::io::{ Read, Write };
+    use std::fs::{self, File};
+    use std::io::{Read, Write};
     use std::net::TcpStream;
     use std::os::unix::fs::PermissionsExt;
     use self::ssh2::Session;
@@ -75,23 +79,29 @@ fn ssh(source: &str, d: &Deploy) -> Result {
         if let Ok(mut channel) = channel_session {
             let res = channel.exec(cmd);
             if let Err(e) = res {
-                term_println(self::term::color::RED,
-                             SSH_LABEL,
-                             &format!("Failed to execute command: {}", e));
+                term_println(
+                    self::term::color::RED,
+                    SSH_LABEL,
+                    &format!("Failed to execute command: {}", e),
+                );
             } else {
                 let mut s = String::new();
                 if let Ok(_) = channel.read_to_string(&mut s) {
                     if !s.is_empty() {
-                        term_print(self::term::color::WHITE,
-                                   &format!("{} ({}):", SSH_LABEL, cmd),
-                                   &s);
+                        term_print(
+                            self::term::color::WHITE,
+                            &format!("{} ({}):", SSH_LABEL, cmd),
+                            &s,
+                        );
                     }
                 }
             }
         } else {
-            term_println(self::term::color::RED,
-                         SSH_LABEL,
-                         "Failed to get channel for command execution.");
+            term_println(
+                self::term::color::RED,
+                SSH_LABEL,
+                "Failed to get channel for command execution.",
+            );
         }
     };
 
@@ -102,84 +112,96 @@ fn ssh(source: &str, d: &Deploy) -> Result {
             let metadata = file.metadata().unwrap();
             let file_size = metadata.len();
             let file_path_str = local_path.to_str().unwrap();
-            let mut remote_file = sess.scp_send(remote_path,
-                                                metadata.permissions().mode() as i32,
-                                                file_size,
-                                                None).unwrap();
+            let mut remote_file = sess.scp_send(
+                remote_path,
+                metadata.permissions().mode() as i32,
+                file_size,
+                None,
+            ).unwrap();
             while let Ok(read_bytes) = file.read(&mut buffer) {
                 if read_bytes == 0usize {
-                    break
+                    break;
                 }
                 read += read_bytes as u64;
                 remote_file.write_all(&buffer).unwrap();
-                term_rprint(self::term::color::WHITE,
-                            SSH_LABEL,
-                            &format!("Sending \"{}\" [{:.2} MB of {:.2} MB]",
-                                     file_path_str,
-                                     read as f64 / 1048576.0f64,
-                                     file_size as f64 / 1048576.0f64));
+                term_rprint(
+                    self::term::color::WHITE,
+                    SSH_LABEL,
+                    &format!(
+                        "Sending \"{}\" [{:.2} MB of {:.2} MB]",
+                        file_path_str,
+                        read as f64 / 1048576.0f64,
+                        file_size as f64 / 1048576.0f64
+                    ),
+                );
             }
             term_rprint_finish();
         }
     };
 
     if let Some(ref ssh) = d.ssh {
-        term_println(self::term::color::WHITE,
-                     SSH_LABEL,
-                     &format!("Connecting to {}", ssh.hostname));
+        term_println(
+            self::term::color::WHITE,
+            SSH_LABEL,
+            &format!("Connecting to {}", ssh.hostname),
+        );
         let tcp = TcpStream::connect(&ssh.hostname).unwrap();
         let mut sess = Session::new().unwrap();
         sess.handshake(&tcp).unwrap();
 
         for i in 0..3 {
-            term_print(self::term::color::WHITE,
-                       SSH_LABEL,
-                       &format!("Password for {}: ", ssh.username));
+            term_print(
+                self::term::color::WHITE,
+                SSH_LABEL,
+                &format!("Password for {}: ", ssh.username),
+            );
             let ssh_password = read_password().unwrap();
-            
+
             if ssh_password.is_empty() {
                 if i == 2 {
-                    return Err("SSH password can not be empty.".to_owned())
+                    return Err("SSH password can not be empty.".to_owned());
                 } else {
-                    term_println(self::term::color::YELLOW,
-                                 SSH_LABEL,
-                                 "Password can not be empty.");
-                    continue
+                    term_println(
+                        self::term::color::YELLOW,
+                        SSH_LABEL,
+                        "Password can not be empty.",
+                    );
+                    continue;
                 }
             }
 
             term_println(self::term::color::WHITE, SSH_LABEL, "Authorizing...");
             if let Err(e) = sess.userauth_password(&ssh.username, &ssh_password) {
                 if i == 2 {
-                    return Err(e.to_string())
+                    return Err(e.to_string());
                 } else {
                     term_println(self::term::color::RED, SSH_LABEL, &e.to_string());
-                    continue
+                    continue;
                 }
             } else {
-                break
+                break;
             }
         }
 
         term_println(self::term::color::WHITE, SSH_LABEL, "Uploading files...");
-        
+
         let path = Path::new(source);
         exec(&sess, &format!("mkdir -p {}", ssh.remote_path));
         let dir = fs::read_dir(path).unwrap();
         for entry in dir {
             let e = entry.unwrap();
             let file_name_str = e.file_name().into_string().unwrap();
-            let remote_path_str = format!("{}/{}",
-                                          ssh.remote_path,
-                                          file_name_str);
+            let remote_path_str = format!("{}/{}", ssh.remote_path, file_name_str);
             let remote_path = Path::new(&remote_path_str);
             send_file(&sess, &e.path(), &remote_path);
         }
 
         if let Some(ref ds) = ssh.deploy_script {
-            term_println(self::term::color::WHITE,
-                         SSH_LABEL,
-                         &format!("Uploading deploy script: {}", ds));
+            term_println(
+                self::term::color::WHITE,
+                SSH_LABEL,
+                &format!("Uploading deploy script: {}", ds),
+            );
 
             let remote_path_str = format!("{}/{}", ssh.remote_path, ds);
             let local_path = Path::new(ds);
@@ -187,10 +209,15 @@ fn ssh(source: &str, d: &Deploy) -> Result {
 
             send_file(&sess, &local_path, &remote_path);
 
-            term_println(self::term::color::WHITE,
-                         SSH_LABEL,
-                         &format!("Executing deploy script: {}", ds));
-            exec(&sess, &format!("cd {}; sh {}", ssh.remote_path, remote_path_str));
+            term_println(
+                self::term::color::WHITE,
+                SSH_LABEL,
+                &format!("Executing deploy script: {}", ds),
+            );
+            exec(
+                &sess,
+                &format!("cd {}; sh {}", ssh.remote_path, remote_path_str),
+            );
             exec(&sess, &format!("rm {}", remote_path_str));
         }
     }

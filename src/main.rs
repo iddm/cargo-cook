@@ -1,13 +1,13 @@
 #[macro_use]
 extern crate clap;
 #[macro_use]
-extern crate serde_derive;
-#[macro_use]
 extern crate lazy_static;
-extern crate serde;
-extern crate toml;
 extern crate regex;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 extern crate term;
+extern crate toml;
 
 mod hash;
 mod container;
@@ -16,7 +16,7 @@ mod deploy;
 mod config;
 mod term_print;
 
-use clap::{ App, AppSettings, SubCommand };
+use clap::{App, AppSettings, SubCommand};
 use regex::Regex;
 
 use std::fs::File;
@@ -29,12 +29,10 @@ use std::panic;
 use config::*;
 use term_print::*;
 
-
 const CONFIG_FILE_NAME: &'static str = "Cook.toml";
 const CARGO_TOML: &'static str = "Cargo.toml";
 const COMMAND_NAME: &'static str = "cook";
 const COMMAND_DESCRIPTION: &'static str = "A third-party cargo extension which cooks your crate.";
-
 
 fn main() {
     #[cfg(not(debug_assertions))]
@@ -64,11 +62,18 @@ fn cook() {
     #[cfg(debug_assertions)]
     println!("Config: {:?}", cook_config);
     parse_config(&cook_config);
-    let pkg_name = &format!("{} v{}", cargo_config.package.name, cargo_config.package.version);
+    let pkg_name = &format!(
+        "{} v{}",
+        cargo_config.package.name, cargo_config.package.version
+    );
     term_println(term::color::BRIGHT_GREEN, "Cooking", pkg_name);
     cook_hook(&cook_config.cook, true);
 
-    archive(&cook_config, &cargo_config, collect(&cook_config, &cargo_config));
+    archive(
+        &cook_config,
+        &cargo_config,
+        collect(&cook_config, &cargo_config),
+    );
     #[cfg(feature = "deploy")]
     deploy(&cook_config);
 
@@ -86,8 +91,10 @@ fn collect_recursively(source: &str, destination: &str, files: &mut container::F
     for entry in fs::read_dir(path).unwrap() {
         let e = entry.unwrap();
         let name = e.file_name().into_string().unwrap();
-        files.push((format!("{}/{}", destination.to_owned(), name),
-                    e.path().to_str().unwrap().to_owned()));
+        files.push((
+            format!("{}/{}", destination.to_owned(), name),
+            e.path().to_str().unwrap().to_owned(),
+        ));
     }
 }
 
@@ -107,22 +114,30 @@ fn collect(c: &CookConfig, cargo: &CargoConfig) -> container::Files {
                         let e = entry.unwrap();
                         let name = e.file_name().into_string().unwrap();
                         if r.is_match(&name) {
-                            files.push((format!("{}/{}", i.destination.clone(), name),
-                                        e.path().to_str().unwrap().to_owned()));
+                            files.push((
+                                format!("{}/{}", i.destination.clone(), name),
+                                e.path().to_str().unwrap().to_owned(),
+                            ));
                         }
                     }
                 } else {
                     collect_recursively(&i.source, &i.destination, &mut files);
                 }
             } else {
-                panic!("Specified ingredient ({}) is neither a file nor a directory.", i.source);
+                panic!(
+                    "Specified ingredient ({}) is neither a file nor a directory.",
+                    i.source
+                );
             }
         }
     }
-    
+
     let target_file_name = format!("{}/{}", c.cook.target_directory, cargo.package.name);
-    let renamed_target_file_name = if let Some(s) = c.cook.target_rename.clone() { s }
-                                   else { cargo.package.name.clone() };
+    let renamed_target_file_name = if let Some(s) = c.cook.target_rename.clone() {
+        s
+    } else {
+        cargo.package.name.clone()
+    };
     files.push((renamed_target_file_name, target_file_name));
     files
 }
@@ -131,10 +146,10 @@ fn archive(c: &CookConfig, cargo: &CargoConfig, cf: container::Files) {
     std::fs::create_dir_all(&c.cook.cook_directory).unwrap();
 
     for cont in &c.cook.containers {
-        let file_name = &format!("{}/{}-{}",
-                                 c.cook.cook_directory,
-                                 cargo.package.name,
-                                 cargo.package.version);
+        let file_name = &format!(
+            "{}/{}-{}",
+            c.cook.cook_directory, cargo.package.name, cargo.package.version
+        );
         let archive_file_name = &format!("{}.{}", file_name, cont);
         // Archive
         container::compress(&cf, archive_file_name, cont);
@@ -148,7 +163,11 @@ fn archive(c: &CookConfig, cargo: &CargoConfig, cf: container::Files) {
         }
 
         let archive_file_path = Path::new(archive_file_name).canonicalize().unwrap();
-        term_println(term::color::BRIGHT_GREEN, "Cooked", &format!("{}", archive_file_path.display()));
+        term_println(
+            term::color::BRIGHT_GREEN,
+            "Cooked",
+            &format!("{}", archive_file_path.display()),
+        );
     }
 }
 
@@ -171,7 +190,7 @@ fn deploy(c: &CookConfig) {
     }
 }
 
-fn load_config<T: std::fmt::Debug + serde::Deserialize>(file_name: &str) -> T {
+fn load_config<T: std::fmt::Debug + serde::de::DeserializeOwned>(file_name: &str) -> T {
     let mut config_toml = String::new();
     let config_file_name = file_name.to_owned();
     if let Ok(mut file) = File::open(config_file_name.clone()) {
@@ -183,9 +202,13 @@ fn load_config<T: std::fmt::Debug + serde::Deserialize>(file_name: &str) -> T {
     }
     let parsed = toml::de::from_str::<T>(&config_toml);
     if let Ok(c) = parsed {
-        return c
+        return c;
     } else {
-        panic!("Unable to parse {}: {}", config_file_name, parsed.unwrap_err());
+        panic!(
+            "Unable to parse {}: {}",
+            config_file_name,
+            parsed.unwrap_err()
+        );
     }
 }
 
@@ -198,19 +221,25 @@ fn cook_hook(c: &Cook, pre: bool) -> bool {
         let res = Command::new(Path::new(pre).canonicalize().unwrap()).status();
         if let Ok(s) = res {
             if s.success() {
-                term_println(term::color::BRIGHT_GREEN, hook_name, &format!("returned {}",
-                                                                            s.code().unwrap_or(0i32)));
+                term_println(
+                    term::color::BRIGHT_GREEN,
+                    hook_name,
+                    &format!("returned {}", s.code().unwrap_or(0i32)),
+                );
             } else {
-                term_println(term::color::BRIGHT_RED, hook_name, &format!("returned {}",
-                                                                          s.code().unwrap_or(0i32)));
+                term_println(
+                    term::color::BRIGHT_RED,
+                    hook_name,
+                    &format!("returned {}", s.code().unwrap_or(0i32)),
+                );
             }
-            return s.success()
+            return s.success();
         } else {
             panic!("{} failed: {}", hook_name, res.unwrap_err());
         }
     }
 
-    return true
+    return true;
 }
 
 fn parse_config(c: &CookConfig) {

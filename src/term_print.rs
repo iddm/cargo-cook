@@ -23,22 +23,15 @@ pub fn term_rprint_finish() {
 }
 
 #[allow(dead_code)]
-pub fn term_print(color: self::term::color::Color,
-                  status_text: &str,
-                  text: &str) {
+pub fn term_print(color: self::term::color::Color, status_text: &str, text: &str) {
     term_print_(color, status_text, text, false);
 }
 
-pub fn term_println(color: self::term::color::Color,
-                    status_text: &str,
-                    text: &str) {
+pub fn term_println(color: self::term::color::Color, status_text: &str, text: &str) {
     term_print_(color, status_text, text, true);
 }
 
-fn term_print_(color: self::term::color::Color,
-               status_text: &str,
-               text: &str,
-               newline: bool) {
+fn term_print_(color: self::term::color::Color, status_text: &str, text: &str, newline: bool) {
     let mut t = self::term::stdout().unwrap();
 
     t.attr(self::term::Attr::Bold).unwrap();
@@ -58,4 +51,3 @@ fn term_print_(color: self::term::color::Color,
 pub fn term_panic(text: &str) {
     term_println(self::term::color::BRIGHT_RED, "Failure:", text);
 }
-
