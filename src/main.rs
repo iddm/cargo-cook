@@ -19,8 +19,7 @@ mod term_print;
 use clap::{App, AppSettings, SubCommand};
 use regex::Regex;
 
-use std::fs::File;
-use std::io::Read;
+use std::fs;
 use std::path::Path;
 use std::process::Command;
 #[cfg(not(debug_assertions))]
@@ -191,24 +190,15 @@ fn deploy(c: &CookConfig) {
 }
 
 fn load_config<T: std::fmt::Debug + serde::de::DeserializeOwned>(file_name: &str) -> T {
-    let mut config_toml = String::new();
-    let config_file_name = file_name.to_owned();
-    if let Ok(mut file) = File::open(config_file_name.clone()) {
-        if let Err(e) = file.read_to_string(&mut config_toml) {
-            panic!("Unable to read {}: {}", config_file_name, e);
-        }
-    } else {
-        panic!("{} file was not found.", config_file_name);
-    }
+    let config_toml = match fs::read_to_string(file_name) {
+        Ok(s) => s,
+        Err(e) => panic!("Unable to read {}: {}", file_name, e),
+    };
     let parsed = toml::de::from_str::<T>(&config_toml);
     if let Ok(c) = parsed {
         return c;
     } else {
-        panic!(
-            "Unable to parse {}: {}",
-            config_file_name,
-            parsed.unwrap_err()
-        );
+        panic!("Unable to parse {}: {}", file_name, parsed.unwrap_err());
     }
 }
 

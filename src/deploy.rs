@@ -21,7 +21,7 @@ lazy_static! {
         m
     };
 
-    static ref PAGE_SIZE: isize = sysconf(SysconfVariable::ScPagesize).unwrap();
+    static ref PAGE_SIZE: i64 = sysconf(SysconfVariable::ScPagesize).unwrap() as i64;
 }
 
 fn fscopy(source: &str, d: &Deploy) -> Result {
