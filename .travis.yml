@@ -5,7 +5,6 @@ rust:
   - nightly
 os:
   - linux
-  - osx
 cache:
   cargo: true
   timeout: 900
