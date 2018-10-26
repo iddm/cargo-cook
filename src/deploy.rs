@@ -6,6 +6,7 @@ extern crate term;
 
 use config::Deploy;
 use std::collections::HashMap;
+use std::fs::File;
 use std::result::Result as StdResult;
 
 pub type Result = StdResult<(), String>;
@@ -64,7 +65,6 @@ fn ssh(source: &str, d: &Deploy) -> Result {
     use std::fs::{self, File};
     use std::io::{Read, Write};
     use std::net::TcpStream;
-    use std::os::unix::fs::PermissionsExt;
     use std::path::Path;
     use term_print::*;
 
@@ -109,12 +109,8 @@ fn ssh(source: &str, d: &Deploy) -> Result {
             let file_size = metadata.len();
             let file_path_str = local_path.to_str().unwrap();
             let mut remote_file = sess
-                .scp_send(
-                    remote_path,
-                    metadata.permissions().mode() as i32,
-                    file_size,
-                    None,
-                ).unwrap();
+                .scp_send(remote_path, file_mode(&file), file_size, None)
+                .unwrap();
             while let Ok(read_bytes) = file.read(&mut buffer) {
                 if read_bytes == 0usize {
                     break;
@@ -220,6 +216,19 @@ fn ssh(source: &str, d: &Deploy) -> Result {
     }
 
     Ok(())
+}
+
+#[cfg(unix)]
+fn file_mode(f: &File) -> i32 {
+    use std::os::unix::fs::PermissionsExt;
+
+    let metadata = f.metadata().unwrap();
+    metadata.permissions().mode() as i32
+}
+
+#[cfg(not(unix))]
+fn file_mode(_f: &File) -> i32 {
+    777
 }
 
 pub fn support_deploy_target(target: &str) -> bool {
