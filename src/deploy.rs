@@ -2,13 +2,12 @@
 extern crate rpassword;
 #[cfg(feature = "ssh")]
 extern crate ssh2;
-extern crate sysconf;
 extern crate term;
 
-use std::collections::HashMap;
-use std::result::Result as StdResult;
 use config::Deploy;
-use self::sysconf::{sysconf, SysconfVariable};
+use std::collections::HashMap;
+use std::fs::File;
+use std::result::Result as StdResult;
 
 pub type Result = StdResult<(), String>;
 
@@ -20,13 +19,11 @@ lazy_static! {
         m.insert("fscopy", fscopy as fn(&str, &Deploy) -> Result);
         m
     };
-
-    static ref PAGE_SIZE: i64 = sysconf(SysconfVariable::ScPagesize).unwrap() as i64;
 }
 
 fn fscopy(source: &str, d: &Deploy) -> Result {
-    use std::path::Path;
     use std::fs;
+    use std::path::Path;
     use term_print::*;
 
     const FSCOPY_LABEL: &'static str = "[fscopy]";
@@ -63,13 +60,12 @@ fn fscopy(source: &str, d: &Deploy) -> Result {
 
 #[cfg(feature = "ssh")]
 fn ssh(source: &str, d: &Deploy) -> Result {
-    use std::path::Path;
+    use self::rpassword::read_password;
+    use self::ssh2::Session;
     use std::fs::{self, File};
     use std::io::{Read, Write};
     use std::net::TcpStream;
-    use std::os::unix::fs::PermissionsExt;
-    use self::ssh2::Session;
-    use self::rpassword::read_password;
+    use std::path::Path;
     use term_print::*;
 
     const SSH_LABEL: &'static str = "[ssh]";
@@ -106,18 +102,15 @@ fn ssh(source: &str, d: &Deploy) -> Result {
     };
 
     let send_file = |sess: &Session, local_path: &Path, remote_path: &Path| {
-        let mut buffer = vec![0; *PAGE_SIZE as usize];
+        let mut buffer = vec![];
         let mut read = 0u64;
         if let Ok(mut file) = File::open(local_path) {
             let metadata = file.metadata().unwrap();
             let file_size = metadata.len();
             let file_path_str = local_path.to_str().unwrap();
-            let mut remote_file = sess.scp_send(
-                remote_path,
-                metadata.permissions().mode() as i32,
-                file_size,
-                None,
-            ).unwrap();
+            let mut remote_file = sess
+                .scp_send(remote_path, file_mode(&file), file_size, None)
+                .unwrap();
             while let Ok(read_bytes) = file.read(&mut buffer) {
                 if read_bytes == 0usize {
                     break;
@@ -223,6 +216,19 @@ fn ssh(source: &str, d: &Deploy) -> Result {
     }
 
     Ok(())
+}
+
+#[cfg(unix)]
+fn file_mode(f: &File) -> i32 {
+    use std::os::unix::fs::PermissionsExt;
+
+    let metadata = f.metadata().unwrap();
+    metadata.permissions().mode() as i32
+}
+
+#[cfg(not(unix))]
+fn file_mode(_f: &File) -> i32 {
+    777
 }
 
 pub fn support_deploy_target(target: &str) -> bool {

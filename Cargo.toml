@@ -22,7 +22,6 @@ rust-crypto = "0.2"
 term = "0.5"
 lazy_static = "1"
 rpassword = "2"
-sysconf = "0.3"
 
 [features]
 default = ["compression", "deploy"]
