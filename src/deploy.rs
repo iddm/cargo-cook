@@ -147,7 +147,8 @@ fn ssh(source: &str, d: &Deploy) -> Result {
         );
         let tcp = TcpStream::connect(&ssh.hostname).unwrap();
         let mut sess = Session::new().unwrap();
-        sess.handshake(&tcp).unwrap();
+        sess.set_tcp_stream(tcp);
+        sess.handshake().unwrap();
 
         for i in 0..3 {
             term_print(

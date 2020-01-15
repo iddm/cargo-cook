@@ -81,8 +81,6 @@ fn cook() {
 }
 
 fn collect_recursively(source: &str, destination: &str, files: &mut container::Files) {
-    use std::fs;
-
     let path = Path::new(source);
     if !path.is_dir() {
         panic!("{} is not a directory!", path.display());
@@ -98,8 +96,6 @@ fn collect_recursively(source: &str, destination: &str, files: &mut container::F
 }
 
 fn collect(c: &CookConfig, cargo: &CargoConfig) -> container::Files {
-    use std::fs;
-
     let mut files = container::Files::new();
     if let Some(ref ingredients) = c.cook.ingredient {
         for i in ingredients {
