@@ -9,29 +9,29 @@ extern crate serde_derive;
 extern crate term;
 extern crate toml;
 
-mod hash;
+mod config;
 mod container;
 #[cfg(feature = "deploy")]
 mod deploy;
-mod config;
+mod hash;
 mod term_print;
 
 use clap::{App, AppSettings, SubCommand};
 use regex::Regex;
 
 use std::fs;
-use std::path::Path;
-use std::process::Command;
 #[cfg(not(debug_assertions))]
 use std::panic;
+use std::path::Path;
+use std::process::Command;
 
 use config::*;
 use term_print::*;
 
-const CONFIG_FILE_NAME: &'static str = "Cook.toml";
-const CARGO_TOML: &'static str = "Cargo.toml";
-const COMMAND_NAME: &'static str = "cook";
-const COMMAND_DESCRIPTION: &'static str = "A third-party cargo extension which cooks your crate.";
+const CONFIG_FILE_NAME: &str = "Cook.toml";
+const CARGO_TOML: &str = "Cargo.toml";
+const COMMAND_NAME: &str = "cook";
+const COMMAND_DESCRIPTION: &str = "A third-party cargo extension which cooks your crate.";
 
 fn main() {
     #[cfg(not(debug_assertions))]
@@ -47,8 +47,7 @@ fn main() {
         .bin_name("cargo")
         // We use a subcommand because parsed after `cargo` is sent to the third party plugin
         // which will be interpreted as a subcommand/positional arg by clap
-        .subcommand(SubCommand::with_name(COMMAND_NAME)
-            .about(COMMAND_DESCRIPTION))
+        .subcommand(SubCommand::with_name(COMMAND_NAME).about(COMMAND_DESCRIPTION))
         .settings(&[AppSettings::SubcommandRequired])
         .get_matches();
 
@@ -190,12 +189,8 @@ fn load_config<T: std::fmt::Debug + serde::de::DeserializeOwned>(file_name: &str
         Ok(s) => s,
         Err(e) => panic!("Unable to read {}: {}", file_name, e),
     };
-    let parsed = toml::de::from_str::<T>(&config_toml);
-    if let Ok(c) = parsed {
-        return c;
-    } else {
-        panic!("Unable to parse {}: {}", file_name, parsed.unwrap_err());
-    }
+    toml::de::from_str::<T>(&config_toml)
+        .unwrap_or_else(|e| panic!("Unable to parse {}: {}", file_name, e))
 }
 
 fn cook_hook(c: &Cook, pre: bool) -> bool {
@@ -225,7 +220,7 @@ fn cook_hook(c: &Cook, pre: bool) -> bool {
         }
     }
 
-    return true;
+    true
 }
 
 fn parse_config(c: &CookConfig) {

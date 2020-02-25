@@ -5,12 +5,14 @@ extern crate ssh2;
 extern crate sysconf;
 extern crate term;
 
+use self::sysconf::{sysconf, SysconfVariable};
+use config::Deploy;
 use std::collections::HashMap;
 use std::result::Result as StdResult;
-use config::Deploy;
-use self::sysconf::{sysconf, SysconfVariable};
 
 pub type Result = StdResult<(), String>;
+
+const BYTES_IN_MB: f64 = 1_048_576.0;
 
 lazy_static! {
     static ref TARGETS: HashMap<&'static str, fn(&str, &Deploy) -> Result> = {
@@ -20,16 +22,15 @@ lazy_static! {
         m.insert("fscopy", fscopy as fn(&str, &Deploy) -> Result);
         m
     };
-
     static ref PAGE_SIZE: i64 = sysconf(SysconfVariable::ScPagesize).unwrap() as i64;
 }
 
 fn fscopy(source: &str, d: &Deploy) -> Result {
-    use std::path::Path;
     use std::fs;
+    use std::path::Path;
     use term_print::*;
 
-    const FSCOPY_LABEL: &'static str = "[fscopy]";
+    const FSCOPY_LABEL: &str = "[fscopy]";
 
     if let Some(ref fscopy) = d.fscopy {
         let path = Path::new(source);
@@ -63,16 +64,16 @@ fn fscopy(source: &str, d: &Deploy) -> Result {
 
 #[cfg(feature = "ssh")]
 fn ssh(source: &str, d: &Deploy) -> Result {
-    use std::path::Path;
+    use self::rpassword::read_password;
+    use self::ssh2::Session;
     use std::fs::{self, File};
     use std::io::{Read, Write};
     use std::net::TcpStream;
     use std::os::unix::fs::PermissionsExt;
-    use self::ssh2::Session;
-    use self::rpassword::read_password;
+    use std::path::Path;
     use term_print::*;
 
-    const SSH_LABEL: &'static str = "[ssh]";
+    const SSH_LABEL: &str = "[ssh]";
 
     let exec = |sess: &Session, cmd: &str| {
         let channel_session = sess.channel_session();
@@ -86,14 +87,12 @@ fn ssh(source: &str, d: &Deploy) -> Result {
                 );
             } else {
                 let mut s = String::new();
-                if let Ok(_) = channel.read_to_string(&mut s) {
-                    if !s.is_empty() {
-                        term_print(
-                            self::term::color::WHITE,
-                            &format!("{} ({}):", SSH_LABEL, cmd),
-                            &s,
-                        );
-                    }
+                if channel.read_to_string(&mut s).is_ok() && !s.is_empty() {
+                    term_print(
+                        self::term::color::WHITE,
+                        &format!("{} ({}):", SSH_LABEL, cmd),
+                        &s,
+                    );
                 }
             }
         } else {
@@ -112,12 +111,14 @@ fn ssh(source: &str, d: &Deploy) -> Result {
             let metadata = file.metadata().unwrap();
             let file_size = metadata.len();
             let file_path_str = local_path.to_str().unwrap();
-            let mut remote_file = sess.scp_send(
-                remote_path,
-                metadata.permissions().mode() as i32,
-                file_size,
-                None,
-            ).unwrap();
+            let mut remote_file = sess
+                .scp_send(
+                    remote_path,
+                    metadata.permissions().mode() as i32,
+                    file_size,
+                    None,
+                )
+                .unwrap();
             while let Ok(read_bytes) = file.read(&mut buffer) {
                 if read_bytes == 0usize {
                     break;
@@ -130,8 +131,8 @@ fn ssh(source: &str, d: &Deploy) -> Result {
                     &format!(
                         "Sending \"{}\" [{:.2} MB of {:.2} MB]",
                         file_path_str,
-                        read as f64 / 1048576.0f64,
-                        file_size as f64 / 1048576.0f64
+                        read as f64 / BYTES_IN_MB,
+                        file_size as f64 / BYTES_IN_MB
                     ),
                 );
             }

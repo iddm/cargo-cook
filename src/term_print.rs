@@ -18,7 +18,7 @@ pub fn term_rprint(color: self::term::color::Color, status_text: &str, text: &st
 pub fn term_rprint_finish() {
     let mut t = self::term::stdout().unwrap();
 
-    write!(t, "\n").unwrap();
+    writeln!(t).unwrap();
     t.flush().unwrap();
 }
 
@@ -40,7 +40,7 @@ fn term_print_(color: self::term::color::Color, status_text: &str, text: &str, n
     let _ = t.reset();
 
     if newline {
-        write!(t, "{}\n", text).unwrap();
+        writeln!(t, "{}", text).unwrap();
     } else {
         write!(t, "{}", text).unwrap();
         t.flush().unwrap();
