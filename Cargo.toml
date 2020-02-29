@@ -1,12 +1,15 @@
 [package]
 name = "cargo-cook"
-version = "0.4.2"
+version = "1.0.0"
 authors = ["Victor Polevoy <fx@thefx.co>"]
 readme = "README.md"
 repository = "https://github.com/vityafx/cargo-cook"
 homepage = "https://github.com/vityafx/cargo-cook"
 license = "MIT/Apache-2.0"
 description = "A third-party cargo extension which allows you to cook your crate"
+edition = "2018"
+keywords = ["cargo", "package", "cook", "make"]
+categories = ["development-tools::cargo-plugins"]
 
 [[bin]]
 name = "cargo-cook"
@@ -14,8 +17,7 @@ name = "cargo-cook"
 [dependencies]
 clap = "2"
 toml = "0.5"
-serde = "1"
-serde_derive = "1"
+serde = { version = "1", features = ["derive"] }
 regex = "1"
 tar = "0.4"
 rust-crypto = "0.2"

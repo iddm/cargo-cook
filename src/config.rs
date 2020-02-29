@@ -1,4 +1,4 @@
-#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, serde::Deserialize)]
 pub struct CookIngredient {
     pub source: String,
     pub filter: Option<String>,
@@ -6,7 +6,7 @@ pub struct CookIngredient {
 }
 
 #[cfg(feature = "ssh")]
-#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, serde::Deserialize)]
 pub struct SshConfig {
     pub hostname: String,
     pub username: String,
@@ -14,13 +14,13 @@ pub struct SshConfig {
     pub deploy_script: Option<String>,
 }
 
-#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, serde::Deserialize)]
 pub struct FsCopy {
     pub path: String,
 }
 
 #[cfg(feature = "deploy")]
-#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, serde::Deserialize)]
 pub struct Deploy {
     pub targets: Option<Vec<String>>,
     #[cfg(feature = "ssh")]
@@ -28,7 +28,7 @@ pub struct Deploy {
     pub fscopy: Option<FsCopy>,
 }
 
-#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, serde::Deserialize)]
 pub struct Cook {
     pub target_directory: String,
     pub target_rename: Option<String>,
@@ -43,18 +43,18 @@ pub struct Cook {
     pub ingredient: Option<Vec<CookIngredient>>,
 }
 
-#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, serde::Deserialize)]
 pub struct Package {
     pub name: String,
     pub version: String,
 }
 
-#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, serde::Deserialize)]
 pub struct CookConfig {
     pub cook: Cook,
 }
 
-#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Ord, PartialOrd, serde::Deserialize)]
 pub struct CargoConfig {
     pub package: Package,
 }

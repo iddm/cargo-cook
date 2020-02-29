@@ -1,15 +1,10 @@
-#[cfg(feature = "bzip2")]
-extern crate bzip2;
-extern crate tar;
-extern crate term;
-
 use std::collections::HashMap;
 
 /// A file name and its' content as string.
 pub type File = (String, String);
 pub type Files = Vec<(String, String)>;
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref CONTAINERS: HashMap<&'static str, fn(&str, &[File])> = {
         let mut m = HashMap::new();
         m.insert("tar", tar as fn(&str, &[File]));
@@ -21,11 +16,11 @@ lazy_static! {
 
 #[cfg(feature = "bzip2")]
 fn bzip2(destination_file_path: &str, files: &[File]) {
-    use self::bzip2::read::BzEncoder;
-    use self::bzip2::Compression;
+    use crate::term_print::*;
+    use bzip2::read::BzEncoder;
+    use bzip2::Compression;
     use std::fs::File;
     use std::io::{Read, Write};
-    use term_print::*;
 
     const TEMP_FILE: &str = "/tmp/cooked.tar";
     const BZIP2_LABEL: &str = "[bzip2]";
@@ -40,7 +35,7 @@ fn bzip2(destination_file_path: &str, files: &[File]) {
     let ratio = 100f32 / (raw_bytes.len() as f32 / compressed_bytes.len() as f32);
     let mut compressed_archive = File::create(destination_file_path).unwrap();
     term_println(
-        self::term::color::WHITE,
+        term::color::WHITE,
         BZIP2_LABEL,
         &format!("Compressed ratio: {:.2}%", ratio),
     );
@@ -50,8 +45,8 @@ fn bzip2(destination_file_path: &str, files: &[File]) {
 }
 
 fn tar(destination_file_path: &str, files: &[File]) {
-    use self::tar::Builder;
     use std::fs::File;
+    use tar::Builder;
 
     let file = File::create(destination_file_path).unwrap();
     let mut ar = Builder::new(file);

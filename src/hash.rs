@@ -1,12 +1,10 @@
-extern crate crypto;
-
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 
-use self::crypto::digest::Digest;
+use crypto::digest::Digest;
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref HASHES: HashMap<&'static str, fn(&[u8]) -> String> = {
         let mut m = HashMap::new();
         m.insert("md5", md5 as fn(&[u8]) -> String);
@@ -17,7 +15,7 @@ lazy_static! {
 }
 
 fn md5(bytes: &[u8]) -> String {
-    use self::crypto::md5::Md5;
+    use crypto::md5::Md5;
 
     let mut hasher = Md5::new();
     hasher.input(bytes);
@@ -25,7 +23,7 @@ fn md5(bytes: &[u8]) -> String {
 }
 
 fn sha256(bytes: &[u8]) -> String {
-    use self::crypto::sha2::Sha256;
+    use crypto::sha2::Sha256;
 
     let mut hasher = Sha256::new();
     hasher.input(bytes);
@@ -33,7 +31,7 @@ fn sha256(bytes: &[u8]) -> String {
 }
 
 fn sha512(bytes: &[u8]) -> String {
-    use self::crypto::sha2::Sha512;
+    use crypto::sha2::Sha512;
 
     let mut hasher = Sha512::new();
     hasher.input(bytes);

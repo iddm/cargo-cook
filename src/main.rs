@@ -1,14 +1,3 @@
-#[macro_use]
-extern crate clap;
-#[macro_use]
-extern crate lazy_static;
-extern crate regex;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate term;
-extern crate toml;
-
 mod config;
 mod container;
 #[cfg(feature = "deploy")]
@@ -16,7 +5,7 @@ mod deploy;
 mod hash;
 mod term_print;
 
-use clap::{App, AppSettings, SubCommand};
+use clap::{App, AppSettings, Arg, SubCommand};
 use regex::Regex;
 
 use std::fs;
@@ -32,6 +21,8 @@ const CONFIG_FILE_NAME: &str = "Cook.toml";
 const CARGO_TOML: &str = "Cargo.toml";
 const COMMAND_NAME: &str = "cook";
 const COMMAND_DESCRIPTION: &str = "A third-party cargo extension which cooks your crate.";
+const COMMAND_AUTHOR: &str = "Victor Polevoy <maintainer@thefx.co>";
+const COMMAND_RECIPE_ARG_NAME: &str = "recipe";
 
 fn main() {
     #[cfg(not(debug_assertions))]
@@ -39,26 +30,48 @@ fn main() {
         term_panic(panic_info.payload().downcast_ref::<String>().unwrap());
     }));
 
-    let _ = App::new(format!("cargo-{}", COMMAND_NAME))
+    let matches = App::new(format!("cargo-{}", COMMAND_NAME))
         .about(COMMAND_DESCRIPTION)
-        .version(&crate_version!()[..])
+        .author(COMMAND_AUTHOR)
+        .version(clap::crate_version!())
         // We have to lie about our binary name since this will be a third party
         // subcommand for cargo, this trick learned from cargo-outdated
         .bin_name("cargo")
         // We use a subcommand because parsed after `cargo` is sent to the third party plugin
         // which will be interpreted as a subcommand/positional arg by clap
-        .subcommand(SubCommand::with_name(COMMAND_NAME).about(COMMAND_DESCRIPTION))
+        .subcommand(
+            SubCommand::with_name(COMMAND_NAME)
+                .about(COMMAND_DESCRIPTION)
+                .arg(
+                    Arg::with_name(COMMAND_RECIPE_ARG_NAME)
+                        .short("r")
+                        .long(COMMAND_RECIPE_ARG_NAME)
+                        .value_name("FILE")
+                        .default_value(CONFIG_FILE_NAME)
+                        .help("Sets the recipe file to use for cooking.")
+                        .takes_value(true),
+                ),
+        )
         .settings(&[AppSettings::SubcommandRequired])
         .get_matches();
 
-    cook();
+    cook(
+        matches
+            .subcommand_matches(COMMAND_NAME)
+            .expect("The binary hasn't been invoked as a subcommand.")
+            .value_of(COMMAND_RECIPE_ARG_NAME)
+            .unwrap_or(CONFIG_FILE_NAME),
+    );
 }
 
-fn cook() {
-    let cook_config = load_config::<CookConfig>(CONFIG_FILE_NAME);
+fn cook(cook_config_name: &str) {
+    let cook_config = load_config::<CookConfig>(cook_config_name);
     let cargo_config = load_config::<CargoConfig>(CARGO_TOML);
     #[cfg(debug_assertions)]
-    println!("Config: {:?}", cook_config);
+    println!(
+        "Config file name: {}\nConfig contents: {:?}",
+        cook_config_name, cook_config
+    );
     parse_config(&cook_config);
     let pkg_name = &format!(
         "{} v{}",
@@ -72,6 +85,7 @@ fn cook() {
         &cargo_config,
         collect(&cook_config, &cargo_config),
     );
+
     #[cfg(feature = "deploy")]
     deploy(&cook_config);
 

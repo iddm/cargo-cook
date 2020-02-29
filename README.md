@@ -146,6 +146,15 @@ Once you've done that, because of the way cargo is set up to use third party ext
 
 and that crate will be cooked.
 
+There is an option for specifying non-default file name of a recipe (`Cook.toml` is the default one):
+
+    cargo cook -r MyCustomRecipe.toml
+ 
+That way you may also invoke `cargo cook` with different recipes:
+
+    cargo cook -r MyCustomRecipeForLinux.toml
+    cargo cook -r MyCustomRecipeForWindows.toml
+
 # Contributing
 
 If you'd like to work on your own version of the code, fork this repo and follow the compiling steps above except with your fork.
