@@ -37,5 +37,5 @@ version = "0.3"
 optional = true
 
 [dependencies.ssh2]
-version = "0.8"
+version = "0.9"
 optional = true
