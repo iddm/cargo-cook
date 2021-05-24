@@ -1,6 +1,6 @@
 [package]
 name = "cargo-cook"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["Victor Polevoy <fx@thefx.co>"]
 readme = "README.md"
 repository = "https://github.com/vityafx/cargo-cook"
@@ -21,9 +21,9 @@ serde = { version = "1", features = ["derive"] }
 regex = "1"
 tar = "0.4"
 rust-crypto = "0.2"
-term = "0.6"
+term = "0.7"
 lazy_static = "1"
-rpassword = "4"
+rpassword = "5"
 sysconf = "0.3"
 
 [features]
@@ -33,9 +33,9 @@ deploy = ["ssh"]
 ssh = ["ssh2"]
 
 [dependencies.bzip2]
-version = "0.3"
+version = "0.4"
 optional = true
 
 [dependencies.ssh2]
-version = "0.8"
+version = "0.9"
 optional = true
