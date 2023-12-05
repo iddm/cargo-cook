@@ -1,6 +1,6 @@
 # `cargo cook`
 
-[![](https://meritbadge.herokuapp.com/cargo-cook)](https://crates.io/crates/cargo-cook) [![](https://travis-ci.org/vityafx/cargo-cook.svg?branch=master)](https://travis-ci.org/vityafx/cargo-cook)
+[![](https://meritbadge.herokuapp.com/cargo-cook)](https://crates.io/crates/cargo-cook) [![](https://travis-ci.org/iddm/cargo-cook.svg?branch=master)](https://travis-ci.org/iddm/cargo-cook)
 
 A third-party cargo extension which lets you cook your crate. What it does:
 
@@ -16,7 +16,7 @@ If you still have not understood what is it then just read this:
 # Configuring
 
 To make it work with your crate you must create a file `Cook.toml` in the root directory of your crate.
-Let's look at the [`Cook.toml.example`](https://github.com/vityafx/cargo-cook/blob/master/Cook.toml.example) of `cargo-cook` crate:
+Let's look at the [`Cook.toml.example`](https://github.com/iddm/cargo-cook/blob/master/Cook.toml.example) of `cargo-cook` crate:
 
 ```toml
 [cook]
@@ -123,7 +123,7 @@ Assuming you already have Rust and cargo set up.
 
 Clone this repository and go into the created directory:
 
-    git clone https://github.com/vityafx/cargo-cook.git
+    git clone https://github.com/iddm/cargo-cook.git
     cd cargo-cook
 
 And compile a release version:
